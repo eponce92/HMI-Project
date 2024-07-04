@@ -32,7 +32,10 @@ def get_effective_price(row):
         return row['old_price']
     return row['price']
 
-def optimize_purchase(products, budget, exclude_words):
+def calculate_value_to_weight_ratio(row):
+    return row['weight_lb'] / row['effective_price'] if row['effective_price'] > 0 else 0
+
+def preprocess_data(products, exclude_words, budget):
     df = pd.DataFrame(products)
 
     # Apply exclusion filter
@@ -51,13 +54,19 @@ def optimize_purchase(products, budget, exclude_words):
         df['weight_lb'] / df['effective_price']
     )
 
+    # Filter out products that exceed the budget
+    df = df[df['effective_price'] <= budget]
+
     df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
+    return df
 
-    top_3 = df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
+def get_top_3(df):
+    return df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
 
+def optimize_purchase_greedy(products, budget, exclude_words):
+    df = preprocess_data(products, exclude_words, budget)
     df = df.sort_values('lb_per_dollar', ascending=False).reset_index(drop=True)
-    budget = float(budget)
-
+    
     selected_products = []
     total_weight = 0
     total_price = 0
@@ -68,16 +77,57 @@ def optimize_purchase(products, budget, exclude_words):
             total_weight += product['weight_lb']
             total_price += product['effective_price']
         else:
-            # Try to fit smaller items if there's remaining budget
-            remaining_budget = budget - total_price
-            smaller_products = df[(df['effective_price'] <= remaining_budget) & 
-                                  (~df.index.isin([p['name'] for p in selected_products]))]
-            if not smaller_products.empty:
-                best_smaller_product = smaller_products.iloc[0]
-                selected_products.append(best_smaller_product.to_dict())
-                total_weight += best_smaller_product['weight_lb']
-                total_price += best_smaller_product['effective_price']
-            else:
-                break
+            break
 
+    top_3 = get_top_3(df)
+    return selected_products, total_weight, top_3
+
+def optimize_purchase_knapsack(products, budget, exclude_words):
+    df = preprocess_data(products, exclude_words, budget)
+    n = len(df)
+    weights = df['effective_price'].tolist()
+    values = df['weight_lb'].tolist()
+    
+    # Create a 2D array to store the maximum value at each step
+    dp = [[0 for _ in range(int(budget) + 1)] for _ in range(n + 1)]
+    
+    # Fill the dp array
+    for i in range(1, n + 1):
+        for w in range(int(budget) + 1):
+            if weights[i-1] <= w:
+                dp[i][w] = max(values[i-1] + dp[i-1][int(w-weights[i-1])], dp[i-1][w])
+            else:
+                dp[i][w] = dp[i-1][w]
+    
+    # Backtrack to find the selected items
+    selected_products = []
+    total_weight = 0
+    w = int(budget)
+    for i in range(n, 0, -1):
+        if dp[i][w] != dp[i-1][w]:
+            selected_products.append(df.iloc[i-1].to_dict())
+            total_weight += values[i-1]
+            w -= int(weights[i-1])
+    
+    top_3 = get_top_3(df)
+    return selected_products, total_weight, top_3
+
+def optimize_purchase_ratio(products, budget, exclude_words):
+    df = preprocess_data(products, exclude_words, budget)
+    df['value_to_weight_ratio'] = df.apply(calculate_value_to_weight_ratio, axis=1)
+    df = df.sort_values('value_to_weight_ratio', ascending=False).reset_index(drop=True)
+    
+    selected_products = []
+    total_weight = 0
+    total_price = 0
+
+    for _, product in df.iterrows():
+        if total_price + product['effective_price'] <= budget:
+            selected_products.append(product.to_dict())
+            total_weight += product['weight_lb']
+            total_price += product['effective_price']
+        else:
+            break
+
+    top_3 = get_top_3(df)
     return selected_products, total_weight, top_3

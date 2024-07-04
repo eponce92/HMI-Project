@@ -1,8 +1,8 @@
 import flet as ft
-import re 
-from ui.search_view import SearchView
+import re
 from ui.results_view import ResultsView
-from optimizer.optimization_script import optimize_purchase
+from ui.search_view import SearchView  # Corrected import
+from optimizer.optimization_script import optimize_purchase_greedy, optimize_purchase_knapsack, optimize_purchase_ratio
 
 class MainView(ft.UserControl):
     def __init__(self, page):
@@ -45,20 +45,13 @@ class MainView(ft.UserControl):
                 budget = float(self.budget.value)
                 exclude_words = [word.strip().lower() for word in re.split(r'[,\s]+', self.exclude_term.value)]
                 
-                # Perform optimization
-                selected_products, total_weight, top_3 = optimize_purchase(self.products, budget, exclude_words)
+                # Perform optimizations
+                greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words)
+                knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words)
+                ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words)
                 
-                # Prepare results
-                if not selected_products:
-                    results = []
-                    total_price = 0
-                    total_weight = 0
-                else:
-                    results = selected_products
-                    total_price = sum(product['effective_price'] for product in results)
-
                 # Update results view
-                self.results_view.update_results(results, total_price, total_weight, top_3)
+                self.results_view.update_results(greedy_results, knapsack_results, ratio_results)
                 
                 self.optimize_progress.visible = False
                 self.update()
