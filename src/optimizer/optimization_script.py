@@ -37,6 +37,9 @@ def optimize_purchase(products, budget):
     
     df = df.dropna(subset=['price', 'weight_lb', 'lb_per_dollar'])
     
+    # Sort by lb_per_dollar in descending order and get top 3
+    top_3 = df.sort_values('lb_per_dollar', ascending=False).head(3)
+    
     n = len(df)
     dp = [[0 for _ in range(int(budget) + 1)] for _ in range(n + 1)]
     
@@ -58,7 +61,7 @@ def optimize_purchase(products, budget):
     
     selected_items.reverse()
     
-    return selected_items, dp[n][int(budget)]
+    return selected_items, dp[n][int(budget)], top_3.to_dict('records')
 
 # Example usage (can be removed in production)
 if __name__ == "__main__":
@@ -70,8 +73,9 @@ if __name__ == "__main__":
     ]
     budget = 10.0
     
-    selected_indices, max_weight = optimize_purchase(products, budget)
+    selected_indices, max_weight, top_3 = optimize_purchase(products, budget)
     selected = [products[i] for i in selected_indices]
     print(f"Selected items: {selected}")
     print(f"Total weight: {max_weight} lbs")
     print(f"Total price: ${sum(item['price'] for item in selected)}")
+    print(f"Top 3 by lb/dollar: {top_3}")

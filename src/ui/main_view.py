@@ -19,7 +19,7 @@ class MainView(ft.UserControl):
 
     def handle_search(self, products, budget):
         # Perform optimization
-        selected_indices, max_weight = optimize_purchase(products, budget)
+        selected_indices, max_weight, top_3 = optimize_purchase(products, budget)
         
         # Prepare results
         if not selected_indices:
@@ -32,5 +32,5 @@ class MainView(ft.UserControl):
             total_weight = max_weight
 
         # Update results view
-        self.results_view.update_results(results, total_price, total_weight)
+        self.results_view.update_results(results, total_price, total_weight, top_3)
         self.update()

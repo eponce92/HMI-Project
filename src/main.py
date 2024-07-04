@@ -4,9 +4,9 @@ from ui.main_view import MainView
 def main(page: ft.Page):
     page.title = "Supermarket Product Optimizer"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window_width = 800
-    page.window_height = 600
-    page.window_resizable = True
+    page.window.width = 800  # Updated to use the new property
+    page.window.height = 600  # Updated to use the new property
+    page.window.resizable = True  # Updated to use the new property
     page.padding = 20
 
     def route_change(route):
