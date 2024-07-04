@@ -21,7 +21,6 @@ def main(page: ft.Page):
                         ],
                         scroll=ft.ScrollMode.ALWAYS,  # Enable scrolling for the column
                         expand=True
-                        
                     )
                 ],
                 vertical_alignment=ft.MainAxisAlignment.CENTER,

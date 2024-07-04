@@ -10,6 +10,7 @@ class MainView(ft.UserControl):
         self.search_view = SearchView(self.handle_search)
         self.results_view = ResultsView()
         
+        # Define a consistent height for all input fields and buttons
         self.input_height = 50
         
         self.exclude_term = ft.TextField(
@@ -41,48 +42,54 @@ class MainView(ft.UserControl):
     def build(self):
         return ft.Container(
             content=ft.Column([
-                self.create_section("Supermarket Product Optimizer", [
-                    ft.Text("Scrape Website", size=20, weight=ft.FontWeight.BOLD),
-                    ft.Container(
-                        content=self.search_view,
-                        padding=ft.padding.only(top=10, bottom=10)
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("Supermarket Product Optimizer", size=24, weight=ft.FontWeight.BOLD),
+                            ft.Divider(height=30),
+                            ft.Text("Scrape Website", size=20, weight=ft.FontWeight.BOLD),
+                            ft.Container(
+                                content=self.search_view,
+                                padding=ft.padding.only(top=10, bottom=10)
+                            ),
+                        ]),
+                        padding=20
                     ),
-                ], is_title=True),
-                self.create_section("Filter Products", [
-                    ft.Container(
-                        content=ft.Row(
-                            [
-                                self.exclude_term,
-                                ft.Container(width=10),
-                                self.budget,
-                                ft.Container(width=10),
-                                self.optimize_button,
-                                ft.Container(width=10),
-                                self.optimize_progress
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                        ),
-                        padding=ft.padding.only(top=10, bottom=10)
-                    ),
-                ]),
-                self.create_section("Optimization Results", [self.results_view]),
-            ], alignment=ft.MainAxisAlignment.START, spacing=20),
-            padding=20,
-            expand=True
-        )
-
-    def create_section(self, title, content, is_title=False):
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column(
-                    [ft.Text(title, size=24 if is_title else 20, weight=ft.FontWeight.BOLD)] +
-                    ([ft.Divider(height=30)] if is_title else []) +
-                    content
+                    elevation=4
                 ),
-                padding=20
-            ),
-            elevation=4,
-            expand=True
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("Filter Products", size=20, weight=ft.FontWeight.BOLD),
+                            ft.Container(
+                                content=ft.Row(
+                                    [
+                                        self.exclude_term,
+                                        ft.Container(width=10),  # Add spacing between fields
+                                        self.budget,
+                                        ft.Container(width=10),  # Add spacing before button
+                                        self.optimize_button,
+                                        ft.Container(width=10),  # Add spacing before progress ring
+                                        self.optimize_progress
+                                    ],
+                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                                ),
+                                padding=ft.padding.only(top=10, bottom=10)
+                            ),
+                        ]),
+                        padding=20
+                    ),
+                    elevation=4
+                ),
+                ft.Card(
+                    content=ft.Container(
+                        content=self.results_view,
+                        padding=20
+                    ),
+                    elevation=4
+                )
+            ], alignment=ft.MainAxisAlignment.START, spacing=20),
+            padding=20
         )
 
     def handle_search(self, products):

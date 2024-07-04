@@ -19,8 +19,7 @@ class ResultsView(ft.UserControl):
                 self.create_result_section("Ratio-based Optimization", self.ratio_total_text, self.ratio_results),
                 self.create_result_section("Top 3 Products by lb/dollar", None, self.top_3_results),
             ], spacing=20),  # Add spacing between sections
-            expand=True,
-            
+            expand=True,           
         )
 
     def create_result_section(self, title, total_text, results):
