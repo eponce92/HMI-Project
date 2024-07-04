@@ -1,0 +1,5 @@
+flet==0.10.3
+pandas==2.0.3
+numpy==1.25.2
+selenium==4.11.2
+webdriver-manager==4.0.0
