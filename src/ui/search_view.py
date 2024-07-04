@@ -10,14 +10,27 @@ class SearchView(ft.UserControl):
     def __init__(self, search_callback):
         super().__init__()
         self.search_callback = search_callback
-        self.search_term = ft.TextField(label="Product Search Term", expand=True)
-        self.search_button = ft.ElevatedButton("Scrape", on_click=self.handle_search)
+        self.input_height = 50  # Match the height used in MainView
+        self.search_term = ft.TextField(
+            label="Product Search Term",
+            expand=True,
+            height=self.input_height,
+        )
+        self.search_button = ft.ElevatedButton(
+            "Scrape",
+            on_click=self.handle_search,
+            height=self.input_height,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+            ),
+        )
         self.progress_bar = ft.ProgressBar(visible=False)
 
     def build(self):
         return ft.Column([
             ft.Row([
                 self.search_term,
+                ft.Container(width=10),  # Add spacing between field and button
                 self.search_button
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             self.progress_bar
@@ -33,7 +46,7 @@ class SearchView(ft.UserControl):
             self.update()
         else:
             print("Please enter a search term")
-
+            
     def scrape_products(self, search_term):
         service = Service(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
