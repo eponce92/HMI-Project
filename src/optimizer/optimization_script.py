@@ -32,8 +32,12 @@ def get_effective_price(row):
         return row['old_price']
     return row['price']
 
-def optimize_purchase(products, budget):
+def optimize_purchase(products, budget, exclude_words):
     df = pd.DataFrame(products)
+
+    # Apply exclusion filter
+    exclude_pattern = '|'.join(map(re.escape, exclude_words))
+    df = df[~df['name'].str.lower().str.contains(exclude_pattern, case=False, na=False)]
 
     df['price'] = df['price'].apply(clean_price)
     df['old_price'] = df['old_price'].apply(lambda x: clean_price(x) if pd.notna(x) else np.nan)
@@ -49,33 +53,31 @@ def optimize_purchase(products, budget):
 
     df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
 
-    top_3 = df.sort_values('lb_per_dollar', ascending=False).head(3)
+    top_3 = df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
 
     df = df.sort_values('lb_per_dollar', ascending=False).reset_index(drop=True)
-    n = len(df)
     budget = float(budget)
 
-    dp = [[0 for _ in range(int(budget * 100) + 1)] for _ in range(n + 1)]
-    selected = [[[] for _ in range(int(budget * 100) + 1)] for _ in range(n + 1)]
+    selected_products = []
+    total_weight = 0
+    total_price = 0
 
-    for i in range(1, n + 1):
-        for w in range(int(budget * 100) + 1):
-            price = int(df.iloc[i-1]['effective_price'] * 100)
-            weight = df.iloc[i-1]['weight_lb']
-            
-            if price <= w:
-                if dp[i-1][w] < dp[i-1][w-price] + weight:
-                    dp[i][w] = dp[i-1][w-price] + weight
-                    selected[i][w] = selected[i-1][w-price] + [i-1]
-                else:
-                    dp[i][w] = dp[i-1][w]
-                    selected[i][w] = selected[i-1][w]
+    for _, product in df.iterrows():
+        if total_price + product['effective_price'] <= budget:
+            selected_products.append(product.to_dict())
+            total_weight += product['weight_lb']
+            total_price += product['effective_price']
+        else:
+            # Try to fit smaller items if there's remaining budget
+            remaining_budget = budget - total_price
+            smaller_products = df[(df['effective_price'] <= remaining_budget) & 
+                                  (~df.index.isin([p['name'] for p in selected_products]))]
+            if not smaller_products.empty:
+                best_smaller_product = smaller_products.iloc[0]
+                selected_products.append(best_smaller_product.to_dict())
+                total_weight += best_smaller_product['weight_lb']
+                total_price += best_smaller_product['effective_price']
             else:
-                dp[i][w] = dp[i-1][w]
-                selected[i][w] = selected[i-1][w]
+                break
 
-    selected_indices = selected[n][int(budget * 100)]
-    total_weight = dp[n][int(budget * 100)]
-    selected_products = df.iloc[selected_indices].to_dict('records')
-
-    return selected_products, total_weight, top_3.to_dict('records')
+    return selected_products, total_weight, top_3

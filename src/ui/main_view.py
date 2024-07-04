@@ -44,12 +44,9 @@ class MainView(ft.UserControl):
 
                 budget = float(self.budget.value)
                 exclude_words = [word.strip().lower() for word in re.split(r'[,\s]+', self.exclude_term.value)]
-                # Filter products based on exclude words
-                filtered_products = [product for product in self.products 
-                                     if not any(exclude in product['name'].lower().split() for exclude in exclude_words)]
                 
                 # Perform optimization
-                selected_products, total_weight, top_3 = optimize_purchase(filtered_products, budget)
+                selected_products, total_weight, top_3 = optimize_purchase(self.products, budget, exclude_words)
                 
                 # Prepare results
                 if not selected_products:

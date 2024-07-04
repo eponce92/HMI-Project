@@ -25,8 +25,10 @@ class ResultsView(ft.UserControl):
             for product in results:
                 result_strings.append(
                     f"Name: {product['name']}\n"
-                    f"Price: ${product['price']:.2f}\n"
+                    f"Price: ${product['effective_price']:.2f}\n"
+                    f"Weight: {product['weight_lb']:.2f} lbs\n"
                     f"Price by Weight: {product['price_by_weight']}\n"
+                    f"lb/dollar: {product['lb_per_dollar']:.4f}\n"
                     f"Link: {product['link']}\n"
                 )
             self.optimized_results_text.value = "\n".join(result_strings)
@@ -36,7 +38,8 @@ class ResultsView(ft.UserControl):
         for product in top_3:
             top_3_strings.append(
                 f"Name: {product['name']}\n"
-                f"Price: ${product['price']:.2f}\n"
+                f"Price: ${product['effective_price']:.2f}\n"
+                f"Weight: {product['weight_lb']:.2f} lbs\n"
                 f"Price by Weight: {product['price_by_weight']}\n"
                 f"lb/dollar: {product['lb_per_dollar']:.4f}\n"
                 f"Link: {product['link']}\n"
