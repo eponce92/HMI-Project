@@ -5,7 +5,7 @@ def main(page: ft.Page):
     page.title = "Supermarket Product Optimizer"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window.width = 800  # Updated to use the new property
-    page.window.height = 600  # Updated to use the new property
+    page.window.height = 800  # Updated to use the new property
     page.window.resizable = True  # Updated to use the new property
     page.padding = 20
 

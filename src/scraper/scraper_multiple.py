@@ -7,11 +7,13 @@ def scrape_products(search_term):
     from webdriver_manager.chrome import ChromeDriverManager
     import pandas as pd
     import time
+    import csv
+    import os
 
     # Configurar el servicio del navegador y la instancia del controlador
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless')  # Ejecutar en modo headless (sin interfaz gráfica)
+    # options.add_argument('--headless')  # Ejecutar en modo headless (sin interfaz gráfica)
     driver = webdriver.Chrome(service=service, options=options)
 
     # Solicitar la entrada del usuario
@@ -54,15 +56,33 @@ def scrape_products(search_term):
             price_by_weight = price_by_weight_element[0].get_attribute('innerText').strip() if price_by_weight_element else "No price by weight found"
             link = product.find_element(By.CSS_SELECTOR, 'div.product_thumb > a').get_attribute('href')
             
+            # Extraer el número del producto de la URL
+            product_number = link.split('/')[-1]
+            image_url = f"https://medias.treew.com/imgproducts/middle/{product_number}.jpg"
+            print(f"Product: {name}, Image URL: {image_url}")  # Mensaje de depuración
+            
             product_info = {
                 'name': name,
                 'price': float(price.replace('$', '').replace(',', '')),
                 'old_price': float(old_price.replace('$', '').replace(',', '')) if old_price != "No old price found" else None,
                 'price_by_weight': price_by_weight,
-                'link': link
+                'link': link,
+                'image_url': image_url  # Agregar la URL de la imagen
             }
             products.append(product_info)
 
     driver.quit()
+
+    # Guardar los datos en un archivo CSV
+    keys = products[0].keys()
+    file_path = 'products.csv'
+    try:
+        with open(file_path, 'w', newline='', encoding='utf-8') as output_file:
+            dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(products)
+        print(f"File saved successfully at {os.path.abspath(file_path)}")
+    except Exception as e:
+        print(f"Error saving file: {e}")
 
     return products
