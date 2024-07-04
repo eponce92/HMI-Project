@@ -6,14 +6,16 @@ def scrape_products(search_term):
     from selenium.webdriver.support import expected_conditions as EC
     from webdriver_manager.chrome import ChromeDriverManager
     import pandas as pd
-    import time
     import csv
     import os
+    import requests
 
     # Configurar el servicio del navegador y la instancia del controlador
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')  # Ejecutar en modo headless (sin interfaz gráfica)
+    options.add_argument('--headless')  # Asegurar que se ejecute en modo headless
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(service=service, options=options)
 
     # Solicitar la entrada del usuario
@@ -59,6 +61,16 @@ def scrape_products(search_term):
             # Extraer el número del producto de la URL
             product_number = link.split('/')[-1]
             image_url = f"https://medias.treew.com/imgproducts/middle/{product_number}.jpg"
+            
+            # Verify the image URL
+            try:
+                response = requests.head(image_url)
+                if response.status_code != 200:
+                    image_url = ""
+            except Exception as e:
+                image_url = ""
+                print(f"Error verifying image URL: {e}")
+            
             print(f"Product: {name}, Image URL: {image_url}")  # Mensaje de depuración
             
             product_info = {

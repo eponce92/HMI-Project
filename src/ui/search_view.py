@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import csv
+import os
 
 class SearchView(ft.UserControl):
     def __init__(self, search_callback):
@@ -46,11 +48,11 @@ class SearchView(ft.UserControl):
             self.update()
         else:
             print("Please enter a search term")
-            
+
     def scrape_products(self, search_term):
         service = Service(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
+        # options.add_argument('--headless')
         driver = webdriver.Chrome(service=service, options=options)
 
         url = f'https://www.supermarket23.com/en/buscar?q={search_term}'
@@ -88,16 +90,34 @@ class SearchView(ft.UserControl):
                     price_by_weight = price_by_weight_element[0].get_attribute('innerText').strip() if price_by_weight_element else "No price by weight found"
                     link = product.find_element(By.CSS_SELECTOR, 'div.product_thumb > a').get_attribute('href')
                     
+                    product_number = link.split('/')[-1]
+                    image_url = f"https://medias.treew.com/imgproducts/middle/{product_number}.jpg"
+                    print(f"Product: {name}, Image URL: {image_url}")  # Debug message
+                    
                     product_info = {
                         'name': name,
                         'price': float(price.replace('$', '').replace(',', '')),
                         'old_price': float(old_price.replace('$', '').replace(',', '')) if old_price != "No old price found" else None,
                         'price_by_weight': price_by_weight,
-                        'link': link
+                        'link': link,
+                        'image_url': image_url
                     }
                     products.append(product_info)
                 except Exception as e:
                     print(f"Error processing product: {e}")
 
         driver.quit()
+
+        # Save the data in a CSV file
+        keys = products[0].keys()
+        file_path = 'products.csv'
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as output_file:
+                dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(products)
+            print(f"File saved successfully at {os.path.abspath(file_path)}")
+        except Exception as e:
+            print(f"Error saving file: {e}")
+
         return products
