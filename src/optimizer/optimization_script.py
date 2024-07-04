@@ -4,22 +4,22 @@ import re
 
 def clean_price(price):
     if isinstance(price, str):
-        return float(price.replace('$', '').strip())
+        return float(price.replace('$', '').replace(',', '').strip())
     elif isinstance(price, (int, float)):
         return float(price)
     else:
         return np.nan
 
 def extract_weight_lb(name):
-    match = re.search(r'(\d+(?:\.\d+)?)\s*(?:kg|lb)', name, re.IGNORECASE)
-    if match:
-        value = float(match.group(1))
-        unit = match.group().lower()
-        if 'kg' in unit:
-            return value * 2.20462  # Convert kg to lb
-        else:
-            return value  # Already in pounds
-    return np.nan
+    kg_match = re.search(r'(\d+(?:\.\d+)?)\s*kg', name, re.IGNORECASE)
+    lb_match = re.search(r'(\d+(?:\.\d+)?)\s*lb', name, re.IGNORECASE)
+    
+    if kg_match:
+        return float(kg_match.group(1)) * 2.20462  # Convert kg to lb
+    elif lb_match:
+        return float(lb_match.group(1))
+    else:
+        return np.nan
 
 def extract_price_per_lb(price_by_weight):
     match = re.search(r'\$(\d+(?:\.\d+)?)/lb', price_by_weight, re.IGNORECASE)
@@ -27,55 +27,55 @@ def extract_price_per_lb(price_by_weight):
         return float(match.group(1))
     return np.nan
 
+def get_effective_price(row):
+    if pd.notna(row['old_price']) and row['old_price'] < row['price']:
+        return row['old_price']
+    return row['price']
+
 def optimize_purchase(products, budget):
     df = pd.DataFrame(products)
-    
+
     df['price'] = df['price'].apply(clean_price)
+    df['old_price'] = df['old_price'].apply(lambda x: clean_price(x) if pd.notna(x) else np.nan)
+    df['effective_price'] = df.apply(get_effective_price, axis=1)
     df['weight_lb'] = df['name'].apply(extract_weight_lb)
-    df['lb_per_dollar'] = df['weight_lb'] / df['price']
     df['price_per_lb'] = df['price_by_weight'].apply(extract_price_per_lb)
-    
-    df = df.dropna(subset=['price', 'weight_lb', 'lb_per_dollar'])
-    
-    # Sort by lb_per_dollar in descending order and get top 3
+
+    df['lb_per_dollar'] = np.where(
+        df['price_per_lb'].notna(),
+        1 / df['price_per_lb'],
+        df['weight_lb'] / df['effective_price']
+    )
+
+    df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
+
     top_3 = df.sort_values('lb_per_dollar', ascending=False).head(3)
-    
+
+    df = df.sort_values('lb_per_dollar', ascending=False).reset_index(drop=True)
     n = len(df)
-    dp = [[0 for _ in range(int(budget) + 1)] for _ in range(n + 1)]
-    
+    budget = float(budget)
+
+    dp = [[0 for _ in range(int(budget * 100) + 1)] for _ in range(n + 1)]
+    selected = [[[] for _ in range(int(budget * 100) + 1)] for _ in range(n + 1)]
+
     for i in range(1, n + 1):
-        for w in range(1, int(budget) + 1):
-            if df.iloc[i-1]['price'] <= w:
-                dp[i][w] = max(dp[i-1][w], 
-                               dp[i-1][int(w - df.iloc[i-1]['price'])] + df.iloc[i-1]['weight_lb'])
+        for w in range(int(budget * 100) + 1):
+            price = int(df.iloc[i-1]['effective_price'] * 100)
+            weight = df.iloc[i-1]['weight_lb']
+            
+            if price <= w:
+                if dp[i-1][w] < dp[i-1][w-price] + weight:
+                    dp[i][w] = dp[i-1][w-price] + weight
+                    selected[i][w] = selected[i-1][w-price] + [i-1]
+                else:
+                    dp[i][w] = dp[i-1][w]
+                    selected[i][w] = selected[i-1][w]
             else:
                 dp[i][w] = dp[i-1][w]
-    
-    # Reconstruct the solution
-    w = int(budget)
-    selected_items = []
-    for i in range(n, 0, -1):
-        if dp[i][w] != dp[i-1][w]:
-            selected_items.append(i-1)
-            w = int(w - df.iloc[i-1]['price'])
-    
-    selected_items.reverse()
-    
-    return selected_items, dp[n][int(budget)], top_3.to_dict('records')
+                selected[i][w] = selected[i-1][w]
 
-# Example usage (can be removed in production)
-if __name__ == "__main__":
-    # Sample data
-    products = [
-        {"name": "Apple 1lb", "price": 2.0, "old_price": 2.5, "price_by_weight": "$2.0/lb", "link": "http://example.com/apple"},
-        {"name": "Banana 2kg", "price": 3.0, "old_price": 3.5, "price_by_weight": "$0.68/lb", "link": "http://example.com/banana"},
-        {"name": "Orange Juice 64 oz", "price": 4.0, "old_price": 4.5, "price_by_weight": "$0.0625/oz", "link": "http://example.com/orange-juice"},
-    ]
-    budget = 10.0
-    
-    selected_indices, max_weight, top_3 = optimize_purchase(products, budget)
-    selected = [products[i] for i in selected_indices]
-    print(f"Selected items: {selected}")
-    print(f"Total weight: {max_weight} lbs")
-    print(f"Total price: ${sum(item['price'] for item in selected)}")
-    print(f"Top 3 by lb/dollar: {top_3}")
+    selected_indices = selected[n][int(budget * 100)]
+    total_weight = dp[n][int(budget * 100)]
+    selected_products = df.iloc[selected_indices].to_dict('records')
+
+    return selected_products, total_weight, top_3.to_dict('records')

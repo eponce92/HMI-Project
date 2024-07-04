@@ -5,39 +5,34 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import time
 
 class SearchView(ft.UserControl):
     def __init__(self, search_callback):
         super().__init__()
         self.search_callback = search_callback
         self.search_term = ft.TextField(label="Product Search Term", expand=True)
-        self.budget = ft.TextField(label="Budget ($)", expand=True)
-        self.search_button = ft.ElevatedButton("Search", on_click=self.handle_search)
+        self.search_button = ft.ElevatedButton("Scrape", on_click=self.handle_search)
         self.progress_bar = ft.ProgressBar(visible=False)
 
     def build(self):
         return ft.Column([
-            ft.Row([self.search_term, self.budget], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            self.search_button,
+            ft.Row([
+                self.search_term,
+                self.search_button
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             self.progress_bar
-        ])
+        ], alignment=ft.MainAxisAlignment.START, spacing=10)
 
     def handle_search(self, e):
-        if self.search_term.value and self.budget.value:
-            try:
-                budget = float(self.budget.value)
-                self.progress_bar.visible = True
-                self.update()
-                products = self.scrape_products(self.search_term.value)
-                self.search_callback(products, budget)
-            except ValueError:
-                print("Invalid budget value")
-            finally:
-                self.progress_bar.visible = False
-                self.update()
+        if self.search_term.value:
+            self.progress_bar.visible = True
+            self.update()
+            products = self.scrape_products(self.search_term.value)
+            self.search_callback(products)
+            self.progress_bar.visible = False
+            self.update()
         else:
-            print("Please fill in all fields")
+            print("Please enter a search term")
 
     def scrape_products(self, search_term):
         service = Service(ChromeDriverManager().install())

@@ -15,7 +15,13 @@ def main(page: ft.Page):
             ft.View(
                 "/",
                 [
-                    MainView(page)
+                    ft.Column(
+                        [
+                            MainView(page)
+                        ],
+                        scroll=ft.ScrollMode.ALWAYS,  # Enable scrolling for the column
+                        expand=True
+                    )
                 ],
                 vertical_alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
