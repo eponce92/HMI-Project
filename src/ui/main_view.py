@@ -1,8 +1,8 @@
 import flet as ft
-from ui.results_view import ResultsView
-from ui.search_view import SearchView
-from optimizer.optimization_script import optimize_purchase_greedy, optimize_purchase_knapsack, optimize_purchase_ratio
-import asyncio
+from src.ui.results_view import ResultsView
+from src.ui.search_view import SearchView
+from src.optimizer.optimization_script import optimize_purchase_greedy, optimize_purchase_knapsack, optimize_purchase_ratio
+
 
 class MainView(ft.UserControl):
     def __init__(self, page):

@@ -1,5 +1,5 @@
 import flet as ft
-from ui.main_view import MainView
+from src.ui.main_view import MainView
 
 def main(page: ft.Page):
     page.title = "Supermarket Product Optimizer"
