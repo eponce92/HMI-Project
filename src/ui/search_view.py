@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import asyncio
 import csv
 import os
 
@@ -22,11 +23,15 @@ class SearchView(ft.UserControl):
             "Scrape",
             on_click=self.handle_search,
             height=self.input_height,
+            icon=ft.icons.SEARCH,  
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
             ),
         )
-        self.progress_bar = ft.ProgressBar(visible=False)
+        self.progress_bar = ft.ProgressBar(visible=False, value=0)
+        self.progress_text = ft.Text("", visible=False)
+        self.checkmark = ft.Icon(name=ft.icons.CHECK_CIRCLE, color=ft.colors.GREEN, visible=False)
+        self.working_text = ft.Text("", visible=False)
 
     def build(self):
         return ft.Column([
@@ -35,21 +40,37 @@ class SearchView(ft.UserControl):
                 ft.Container(width=10),  # Add spacing between field and button
                 self.search_button
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            self.progress_bar
+            self.working_text,
+            self.progress_bar,
+            self.progress_text,
+            self.checkmark ,           
         ], alignment=ft.MainAxisAlignment.START, spacing=10)
 
-    def handle_search(self, e):
+    async def handle_search(self, e):
         if self.search_term.value:
-            self.progress_bar.visible = True
-            self.update()
-            products = self.scrape_products(self.search_term.value)
-            self.search_callback(products)
+            self.progress_text.visible = True
+            self.progress_bar.visible = True            
+            self.checkmark.visible = False
+            self.working_text.value = "Working on it..."
+            self.working_text.visible = True
+            self.progress_bar.value = 0  # Reset progress bar
+            await self.update_async()
+            products = await self.scrape_products(self.search_term.value, self.update_progress)
+            await self.search_callback(products)  # Await the callback
             self.progress_bar.visible = False
-            self.update()
+            self.progress_text.visible = False
+            self.checkmark.visible = True
+            self.working_text.visible = False
+            await self.update_async()
         else:
             print("Please enter a search term")
 
-    def scrape_products(self, search_term):
+    async def update_progress(self, current, total):
+        self.progress_bar.value = current / total
+        self.progress_text.value = f"Scraping progress: {current}/{total}"
+        await self.update_async()
+
+    async def scrape_products(self, search_term, progress_callback):
         service = Service(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
@@ -67,6 +88,9 @@ class SearchView(ft.UserControl):
         total_pages = (total_results // results_per_page) + 1
 
         products = []
+        progress_total_steps = total_pages * results_per_page
+        progress_current_step = 0
+
         for page in range(1, total_pages + 1):
             if page > 1:
                 page_url = f"{url}&pagina={page}"
@@ -105,6 +129,11 @@ class SearchView(ft.UserControl):
                     products.append(product_info)
                 except Exception as e:
                     print(f"Error processing product: {e}")
+                
+                # Update progress more frequently
+                progress_current_step += 1
+                await progress_callback(progress_current_step, progress_total_steps)
+                await asyncio.sleep(0.01)  # Small sleep to allow UI update
 
         driver.quit()
 

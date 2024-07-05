@@ -1,43 +1,87 @@
+import flet as ft
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import pandas as pd
+import asyncio
 import csv
 import os
-import requests
 
-def scrape_products(search_term):
-    # Configurar el servicio del navegador y la instancia del controlador
-    service = Service(ChromeDriverManager().install())
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless=new')  # Use the new headless mode
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')  # Disable GPU acceleration (optional)
-    options.add_argument('start-maximized')  # Open browser in maximized mode (optional)
-    driver = webdriver.Chrome(service=service, options=options)
+class SearchView(ft.UserControl):
+    def __init__(self, search_callback):
+        super().__init__()
+        self.search_callback = search_callback
+        self.input_height = 50  # Match the height used in MainView
+        self.search_term = ft.TextField(
+            label="Product Search Term",
+            expand=True,
+            height=self.input_height,
+        )
+        self.search_button = ft.ElevatedButton(
+            "Scrape",
+            on_click=self.handle_search,
+            height=self.input_height,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+            ),
+        )
+        self.progress_bar = ft.ProgressBar(visible=False, value=0)
+        self.progress_text = ft.Text("", visible=False)
+        self.checkmark = ft.Icon(name=ft.icons.CHECK_CIRCLE, color=ft.colors.GREEN, visible=False)
 
-    try:
-        # Solicitar la entrada del usuario
+    def build(self):
+        return ft.Column([
+            ft.Row([
+                self.search_term,
+                ft.Container(width=10),  # Add spacing between field and button
+                self.search_button
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            self.progress_bar,
+            self.progress_text,
+            self.checkmark
+        ], alignment=ft.MainAxisAlignment.START, spacing=10)
+
+    async def handle_search(self, e):
+        if self.search_term.value:
+            self.progress_bar.visible = True
+            self.progress_text.visible = True
+            self.checkmark.visible = False
+            self.progress_bar.value = 0  # Reset progress bar
+            await self.update_async()
+            products = await self.scrape_products(self.search_term.value, self.update_progress)
+            self.search_callback(products)
+            self.progress_bar.visible = False
+            self.progress_text.visible = False
+            self.checkmark.visible = True
+            await self.update_async()
+        else:
+            print("Please enter a search term")
+
+    async def update_progress(self, progress, total):
+        self.progress_bar.value = progress / total
+        self.progress_text.value = f"Scraping progress: {progress}/{total}"
+        await self.update_async()
+
+    async def scrape_products(self, search_term, progress_callback):
+        service = Service(ChromeDriverManager().install())
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        driver = webdriver.Chrome(service=service, options=options)
+
         url = f'https://www.supermarket23.com/en/buscar?q={search_term}'
         driver.get(url)
 
-        # Espera dinámica hasta que los elementos se carguen (máximo 10 segundos)
         WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'single_product')))
 
-        # Obtener el texto del total de resultados
         total_results_element = driver.find_element(By.XPATH, '//p[contains(text(),"Showing")]')
         total_results_text = total_results_element.text
-        total_results = int(total_results_text.split()[-2])  # Obtener el número total de resultados
-        results_per_page = 20  # Ajusta según sea necesario
+        total_results = int(total_results_text.split()[-2])
+        results_per_page = 20
         total_pages = (total_results // results_per_page) + 1
 
         products = []
-
-        # Iterar sobre cada página
         for page in range(1, total_pages + 1):
             if page > 1:
                 page_url = f"{url}&pagina={page}"
@@ -47,57 +91,52 @@ def scrape_products(search_term):
             product_elements = driver.find_elements(By.CLASS_NAME, 'single_product')
 
             for product in product_elements:
-                name_element = WebDriverWait(product, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'h3 > a')))
-                price_element = product.find_elements(By.CSS_SELECTOR, 'span.current_price')
-                if not price_element:
-                    price_element = product.find_elements(By.CSS_SELECTOR, 'span.regular_price')
-                old_price_element = product.find_elements(By.CSS_SELECTOR, 'span.old_price')
-                price_by_weight_element = product.find_elements(By.CSS_SELECTOR, 'span.price-by-weight')
-                
-                # Obtener el texto de los elementos
-                name = name_element.get_attribute('innerText').strip() if name_element else "No name found"
-                price = price_element[0].get_attribute('innerText').strip() if price_element else "No price found"
-                old_price = old_price_element[0].get_attribute('innerText').strip() if old_price_element else "No old price found"
-                price_by_weight = price_by_weight_element[0].get_attribute('innerText').strip() if price_by_weight_element else "No price by weight found"
-                link = product.find_element(By.CSS_SELECTOR, 'div.product_thumb > a').get_attribute('href')
-                
-                # Extraer el número del producto de la URL
-                product_number = link.split('/')[-1]
-                image_url = f"https://medias.treew.com/imgproducts/middle/{product_number}.jpg"
-                
-                # Verify the image URL
                 try:
-                    response = requests.head(image_url)
-                    if response.status_code != 200:
-                        image_url = ""
+                    name_element = WebDriverWait(product, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'h3 > a')))
+                    price_element = product.find_elements(By.CSS_SELECTOR, 'span.current_price')
+                    if not price_element:
+                        price_element = product.find_elements(By.CSS_SELECTOR, 'span.regular_price')
+                    old_price_element = product.find_elements(By.CSS_SELECTOR, 'span.old_price')
+                    price_by_weight_element = product.find_elements(By.CSS_SELECTOR, 'span.price-by-weight')
+                    
+                    name = name_element.get_attribute('innerText').strip() if name_element else "No name found"
+                    price = price_element[0].get_attribute('innerText').strip() if price_element else "No price found"
+                    old_price = old_price_element[0].get_attribute('innerText').strip() if old_price_element else "No old price found"
+                    price_by_weight = price_by_weight_element[0].get_attribute('innerText').strip() if price_by_weight_element else "No price by weight found"
+                    link = product.find_element(By.CSS_SELECTOR, 'div.product_thumb > a').get_attribute('href')
+                    
+                    product_number = link.split('/')[-1]
+                    image_url = f"https://medias.treew.com/imgproducts/middle/{product_number}.jpg"
+                    print(f"Product: {name}, Image URL: {image_url}")  # Debug message
+                    
+                    product_info = {
+                        'name': name,
+                        'price': float(price.replace('$', '').replace(',', '')),
+                        'old_price': float(old_price.replace('$', '').replace(',', '')) if old_price != "No old price found" else None,
+                        'price_by_weight': price_by_weight,
+                        'link': link,
+                        'image_url': image_url
+                    }
+                    products.append(product_info)
                 except Exception as e:
-                    image_url = ""
-                    print(f"Error verifying image URL: {e}")
-                
-                print(f"Product: {name}, Image URL: {image_url}")  # Mensaje de depuración
-                
-                product_info = {
-                    'name': name,
-                    'price': float(price.replace('$', '').replace(',', '')),
-                    'old_price': float(old_price.replace('$', '').replace(',', '')) if old_price != "No old price found" else None,
-                    'price_by_weight': price_by_weight,
-                    'link': link,
-                    'image_url': image_url  # Agregar la URL de la imagen
-                }
-                products.append(product_info)
-    finally:
+                    print(f"Error processing product: {e}")
+            
+            # Update progress
+            await progress_callback(page, total_pages)
+            await asyncio.sleep(0.1)
+
         driver.quit()
 
-    # Guardar los datos en un archivo CSV
-    keys = products[0].keys()
-    file_path = 'products.csv'
-    try:
-        with open(file_path, 'w', newline='', encoding='utf-8') as output_file:
-            dict_writer = csv.DictWriter(output_file, fieldnames=keys)
-            dict_writer.writeheader()
-            dict_writer.writerows(products)
-        print(f"File saved successfully at {os.path.abspath(file_path)}")
-    except Exception as e:
-        print(f"Error saving file: {e}")
+        # Save the data in a CSV file
+        keys = products[0].keys()
+        file_path = 'products.csv'
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as output_file:
+                dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(products)
+            print(f"File saved successfully at {os.path.abspath(file_path)}")
+        except Exception as e:
+            print(f"Error saving file: {e}")
 
-    return products
+        return products

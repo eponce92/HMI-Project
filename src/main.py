@@ -14,7 +14,7 @@ def main(page: ft.Page):
         page.views.append(
             ft.View(
                 "/",
-                [
+                [ 
                     ft.Column(
                         [
                             MainView(page)

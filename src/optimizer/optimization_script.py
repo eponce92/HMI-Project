@@ -38,9 +38,10 @@ def calculate_value_to_weight_ratio(row):
 def preprocess_data(products, exclude_words, budget):
     df = pd.DataFrame(products)
 
-    # Apply exclusion filter
-    exclude_pattern = '|'.join(map(re.escape, exclude_words))
-    df = df[~df['name'].str.lower().str.contains(exclude_pattern, case=False, na=False)]
+    # Apply exclusion filter if there are any exclude words
+    if exclude_words:
+        exclude_pattern = '|'.join(map(re.escape, exclude_words))
+        df = df[~df['name'].str.lower().str.contains(exclude_pattern, case=False, na=False)]
 
     df['price'] = df['price'].apply(clean_price)
     df['old_price'] = df['old_price'].apply(lambda x: clean_price(x) if pd.notna(x) else np.nan)
@@ -59,6 +60,7 @@ def preprocess_data(products, exclude_words, budget):
 
     df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
     return df
+
 
 def get_top_3(df):
     return df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')

@@ -2,6 +2,7 @@ import flet as ft
 from ui.results_view import ResultsView
 from ui.search_view import SearchView
 from optimizer.optimization_script import optimize_purchase_greedy, optimize_purchase_knapsack, optimize_purchase_ratio
+import asyncio
 
 class MainView(ft.UserControl):
     def __init__(self, page):
@@ -92,25 +93,29 @@ class MainView(ft.UserControl):
             padding=20
         )
 
-    def handle_search(self, products):
+    async def handle_search(self, products):
         self.products = products
         self.update()
 
-    def handle_optimize(self, e):
-        if self.exclude_term.value and self.budget.value and hasattr(self, 'products'):
+    async def handle_optimize(self, e):
+        if self.budget.value and hasattr(self, 'products'):  
             try:
                 self.optimize_progress.visible = True
                 self.update()
 
                 budget = float(self.budget.value)
-                exclude_words = [word.strip().lower() for word in self.exclude_term.value.split(',')]
-                
+                exclude_words = [word.strip().lower() for word in self.exclude_term.value.split(',')] if self.exclude_term.value else []
+
                 greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words)
                 knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words)
                 ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words)
-                
+
+                print("Greedy Results:", greedy_results)  # Debugging line
+                print("Knapsack Results:", knapsack_results)  # Debugging line
+                print("Ratio Results:", ratio_results)  # Debugging line
+
                 self.results_view.update_results(greedy_results, knapsack_results, ratio_results)
-                
+
                 self.optimize_progress.visible = False
                 self.update()
             except ValueError:
