@@ -51,7 +51,7 @@ class ResultsView(ft.UserControl):
                 width=800,
                 bgcolor=bgcolor,
                 alignment=ft.alignment.center,
-                padding=0,
+                padding=ft.padding.all(20),
             ),
         )
 
@@ -142,10 +142,10 @@ class ResultsView(ft.UserControl):
                 ], 
                 spacing=0, 
                 alignment=ft.CrossAxisAlignment.STRETCH),
-                border=ft.border.all(1, ft.colors.OUTLINE),
+                border=ft.border.all(2, ft.colors.OUTLINE),
                 border_radius=8,
-                padding=ft.padding.all(5),
-                margin=ft.margin.only(bottom=10),
+                padding=ft.padding.all(10),
+                margin=ft.margin.only(bottom=15),
                 bgcolor=ft.colors.WHITE12
             )
 
@@ -194,10 +194,10 @@ class ResultsView(ft.UserControl):
                 ], 
                 spacing=0, 
                 alignment=ft.CrossAxisAlignment.STRETCH),
-                border=ft.border.all(1, ft.colors.OUTLINE),
+                border=ft.border.all(2, ft.colors.OUTLINE),
                 border_radius=8,
-                padding=ft.padding.all(5),
-                margin=ft.margin.only(bottom=10),
+                padding=ft.padding.all(10),
+                margin=ft.margin.only(bottom=15),
                 bgcolor=ft.colors.WHITE12
             )
 
@@ -210,7 +210,7 @@ class ResultsView(ft.UserControl):
         )
         for title, data in self.optimization_results.items():
             if title == best_performance[0]:
-                data["bgcolor"] = ft.colors.GREEN_100
+                data["bgcolor"] = ft.colors.GREY_200
             else:
                 data["bgcolor"] = ft.colors.WHITE
 
