@@ -14,9 +14,9 @@ class ResultsView(ft.UserControl):
     def build(self):
         return ft.Container(
             content=ft.ExpansionPanelList(
-                expand_icon_color=ft.colors.BLUE_GREY_500,
+                expand_icon_color=ft.colors.BLACK,
                 elevation=2,
-                divider_color=ft.colors.BLUE_GREY_200,
+                divider_color=ft.colors.BLACK,
                 controls=[
                     self.create_expansion_panel("Greedy Optimization", self.greedy_total_text, self.greedy_results),
                     self.create_expansion_panel("Knapsack Optimization", self.knapsack_total_text, self.knapsack_results),
@@ -25,6 +25,8 @@ class ResultsView(ft.UserControl):
                 ],
             ),
             expand=True,
+            alignment=ft.alignment.center,
+            bgcolor=ft.colors.WHITE,  # Set the container background color here
         )
 
     def create_expansion_panel(self, title, total_text, results):
@@ -34,8 +36,9 @@ class ResultsView(ft.UserControl):
                 content=ft.Column([
                     total_text if total_text else ft.Container(),
                     results
-                ]),
-                width=800,  # Ajusta el ancho según sea necesario
+                ], alignment=ft.alignment.center),
+                width=800,
+                bgcolor=ft.colors.WHITE,  # Set the panel content background color here
             ),
         )
 
@@ -72,11 +75,12 @@ class ResultsView(ft.UserControl):
 
                 results_column.controls.append(
                     ft.Container(
-                        content=ft.Column(product_controls),
+                        content=ft.Column(product_controls, alignment=ft.alignment.center),
                         padding=10,
                         border=ft.border.all(1, ft.colors.OUTLINE),
                         border_radius=8,
-                        margin=ft.margin.only(bottom=10)
+                        margin=ft.margin.only(bottom=10),
+                        bgcolor=ft.colors.WHITE12  # Set the individual result background color here
                     )
                 )
             total_price = sum(product['effective_price'] for product in selected_products)
@@ -89,6 +93,7 @@ class ResultsView(ft.UserControl):
                 ft.Text(f"Name: {product['name']}", weight=ft.FontWeight.BOLD),
                 ft.Text(f"Price: ${product['effective_price']:.2f}"),
                 ft.Text(f"Weight: {product['weight_lb']:.2f} lbs"),
+                ft.Text(f"Price by Weight: {product['price_by_weight']}"),
                 ft.Text(f"lb/dollar: {product['lb_per_dollar']:.4f}"),
                 ft.ElevatedButton(
                     "View Product",
@@ -101,11 +106,12 @@ class ResultsView(ft.UserControl):
 
             self.top_3_results.controls.append(
                 ft.Container(
-                    content=ft.Column(product_controls),
+                    content=ft.Column(product_controls, alignment=ft.alignment.center),
                     padding=10,
                     border=ft.border.all(1, ft.colors.OUTLINE),
                     border_radius=8,
-                    margin=ft.margin.only(bottom=10)
+                    margin=ft.margin.only(bottom=10),
+                    bgcolor=ft.colors.LIGHT_BLUE_50  # Set the individual result background color here
                 )
             )
 

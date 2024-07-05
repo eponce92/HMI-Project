@@ -52,7 +52,7 @@ class SearchView(ft.UserControl):
     def scrape_products(self, search_term):
         service = Service(ChromeDriverManager().install())
         options = webdriver.ChromeOptions()
-        # options.add_argument('--headless')
+        options.add_argument('--headless')
         driver = webdriver.Chrome(service=service, options=options)
 
         url = f'https://www.supermarket23.com/en/buscar?q={search_term}'
