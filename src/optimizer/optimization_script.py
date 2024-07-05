@@ -61,7 +61,6 @@ def preprocess_data(products, exclude_words, budget):
     df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
     return df
 
-
 def get_top_3(df):
     return df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
 
@@ -74,12 +73,15 @@ def optimize_purchase_greedy(products, budget, exclude_words):
     total_price = 0
 
     for _, product in df.iterrows():
-        if total_price + product['effective_price'] <= budget:
-            selected_products.append(product.to_dict())
-            total_weight += product['weight_lb']
-            total_price += product['effective_price']
-        else:
-            break
+        quantity = int((budget - total_price) // product['effective_price'])
+        if quantity > 0:
+            for _ in range(quantity):
+                if total_price + product['effective_price'] <= budget:
+                    selected_products.append(product.to_dict())
+                    total_weight += product['weight_lb']
+                    total_price += product['effective_price']
+                else:
+                    break
 
     top_3 = get_top_3(df)
     return selected_products, total_weight, top_3
@@ -107,9 +109,11 @@ def optimize_purchase_knapsack(products, budget, exclude_words):
     w = int(budget)
     for i in range(n, 0, -1):
         if dp[i][w] != dp[i-1][w]:
-            selected_products.append(df.iloc[i-1].to_dict())
-            total_weight += values[i-1]
-            w -= int(weights[i-1])
+            quantity = int(w // weights[i-1])
+            for _ in range(quantity):
+                selected_products.append(df.iloc[i-1].to_dict())
+                total_weight += values[i-1]
+                w -= int(weights[i-1])
     
     top_3 = get_top_3(df)
     return selected_products, total_weight, top_3
@@ -124,12 +128,15 @@ def optimize_purchase_ratio(products, budget, exclude_words):
     total_price = 0
 
     for _, product in df.iterrows():
-        if total_price + product['effective_price'] <= budget:
-            selected_products.append(product.to_dict())
-            total_weight += product['weight_lb']
-            total_price += product['effective_price']
-        else:
-            break
+        quantity = int((budget - total_price) // product['effective_price'])
+        if quantity > 0:
+            for _ in range(quantity):
+                if total_price + product['effective_price'] <= budget:
+                    selected_products.append(product.to_dict())
+                    total_weight += product['weight_lb']
+                    total_price += product['effective_price']
+                else:
+                    break
 
     top_3 = get_top_3(df)
     return selected_products, total_weight, top_3
