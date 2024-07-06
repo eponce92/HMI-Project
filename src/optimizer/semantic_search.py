@@ -49,13 +49,17 @@ class SemanticSearch:
     def check_exclude_similarity(self, product_text, exclude_words):
         if not exclude_words:
             return False
-        exclude_terms = [term.strip() for term in exclude_words if term.strip()]
-        product_embedding = self.model.encode([product_text])
+        exclude_terms = [term.strip().lower() for term in exclude_words if term.strip()]
+        product_text_lower = product_text.lower()
+        product_embedding = self.model.encode([product_text_lower])
         exclude_embeddings = self.model.encode(exclude_terms)
         similarities = cosine_similarity(product_embedding, exclude_embeddings)[0]
-        should_exclude = any(sim > self.similarity_threshold for sim in similarities)
+        fuzzy_scores = [fuzz.partial_ratio(term, product_text_lower) / 100 for term in exclude_terms]
+        should_exclude = any(sim > self.similarity_threshold for sim in similarities) or any(score > 0.8 for score in fuzzy_scores)
         print(f"DEBUG: Checking exclusion for '{product_text}' against {exclude_terms}. Should exclude: {should_exclude}")
         return should_exclude
+
+
 
 def preprocess_query(query):
     return query.lower().strip()

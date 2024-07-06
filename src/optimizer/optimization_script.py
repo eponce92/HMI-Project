@@ -45,6 +45,7 @@ def preprocess_data(products, exclude_words, budget, search_query, similarity_th
     semantic_search = SemanticSearch(similarity_threshold=similarity_threshold)
     semantic_search.index_products(df.to_dict('records'))
 
+    # Initial exclusion
     if exclude_words:
         print(f"DEBUG: Applying exclusion for words: {exclude_words}")
         df['exclude'] = df.apply(lambda row: semantic_search.check_exclude_similarity(
@@ -52,11 +53,21 @@ def preprocess_data(products, exclude_words, budget, search_query, similarity_th
             exclude_words
         ), axis=1)
         df = df[~df['exclude']]
-        print(f"DEBUG: Product count after exclusion: {len(df)}")
+        print(f"DEBUG: Product count after initial exclusion: {len(df)}")
 
     search_results = semantic_search.search(preprocess_query(search_query))
     df = pd.DataFrame(search_results)
     print(f"DEBUG: Product count after semantic search: {len(df)}")
+
+    # Apply exclusion again after search
+    if exclude_words:
+        print(f"DEBUG: Reapplying exclusion for words after search: {exclude_words}")
+        df['exclude'] = df.apply(lambda row: semantic_search.check_exclude_similarity(
+            f"{row['name']} {row.get('description', '')}", 
+            exclude_words
+        ), axis=1)
+        df = df[~df['exclude']]
+        print(f"DEBUG: Product count after reapplying exclusion: {len(df)}")
 
     required_columns = ['name', 'price', 'old_price', 'price_by_weight', 'link', 'image_url']
     for col in required_columns:
@@ -91,6 +102,7 @@ def preprocess_data(products, exclude_words, budget, search_query, similarity_th
     print(df[['name', 'effective_price', 'weight_lb', 'lb_per_dollar']].head())
 
     return df
+
 
 def get_top_3(df):
     return df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
