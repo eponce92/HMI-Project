@@ -3,7 +3,6 @@ from src.ui.results_view import ResultsView
 from src.ui.search_view import SearchView
 from src.optimizer.optimization_script import optimize_purchase_greedy, optimize_purchase_knapsack, optimize_purchase_ratio
 
-
 class MainView(ft.UserControl):
     def __init__(self, page):
         super().__init__()
@@ -14,6 +13,13 @@ class MainView(ft.UserControl):
         # Define a consistent height for all input fields and buttons
         self.input_height = 50
         
+        self.search_query = ft.TextField(
+            label="Search Query",
+            expand=True,
+            prefix_icon=ft.icons.SEARCH,
+            hint_text="Enter your search query",
+            height=self.input_height,
+        )
         self.exclude_term = ft.TextField(
             label="Exclude Words",
             expand=True,
@@ -29,13 +35,15 @@ class MainView(ft.UserControl):
             hint_text="Enter your budget",
             height=self.input_height,
         )
-        self.search_query = ft.TextField(
-            label="Search Query",
-            expand=True,
-            prefix_icon=ft.icons.SEARCH,
-            hint_text="Enter your search query",
-            height=self.input_height,
+        self.similarity_threshold = ft.Slider(
+            min=0,
+            max=1,
+            divisions=20,
+            label="Similarity Threshold: {value}",
+            value=0.3,
+            on_change=self.update_threshold_label
         )
+        self.threshold_label = ft.Text(f"Similarity Threshold: {self.similarity_threshold.value:.2f}")
         self.optimize_button = ft.ElevatedButton(
             "Optimize",
             on_click=self.handle_optimize,
@@ -73,8 +81,8 @@ class MainView(ft.UserControl):
                                 content=ft.Column([
                                     ft.Row(
                                         [
-                                            self.exclude_term,
-                                            ft.Container(width=10),  # Add spacing between fields
+                                            self.search_query,
+                                            ft.Container(width=10),
                                             self.budget,
                                         ],
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -82,14 +90,17 @@ class MainView(ft.UserControl):
                                     ft.Container(height=10),  # Add vertical spacing
                                     ft.Row(
                                         [
-                                            self.search_query,
-                                            ft.Container(width=10),  # Add spacing before button
+                                            self.exclude_term,
+                                            ft.Container(width=10),
                                             self.optimize_button,
-                                            ft.Container(width=10),  # Add spacing before progress ring
+                                            ft.Container(width=10),
                                             self.optimize_progress
                                         ],
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                                     ),
+                                    ft.Container(height=10),  # Add vertical spacing
+                                    self.similarity_threshold,
+                                    self.threshold_label,
                                 ]),
                                 padding=ft.padding.only(top=10, bottom=10)
                             ),
@@ -109,6 +120,10 @@ class MainView(ft.UserControl):
             padding=20
         )
 
+    def update_threshold_label(self, e):
+        self.threshold_label.value = f"Similarity Threshold: {self.similarity_threshold.value:.2f}"
+        self.update()
+
     async def handle_search(self, products):
         self.products = products
         self.update()
@@ -122,10 +137,11 @@ class MainView(ft.UserControl):
                 budget = float(self.budget.value)
                 exclude_words = [word.strip().lower() for word in self.exclude_term.value.split(',')] if self.exclude_term.value else []
                 search_query = self.search_query.value
+                similarity_threshold = self.similarity_threshold.value
 
-                greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words, search_query)
-                knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words, search_query)
-                ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words, search_query)
+                greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words, search_query, similarity_threshold)
+                knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words, search_query, similarity_threshold)
+                ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words, search_query, similarity_threshold)
 
                 print("Greedy Results:", greedy_results)  # Debugging line
                 print("Knapsack Results:", knapsack_results)  # Debugging line

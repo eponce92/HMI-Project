@@ -4,9 +4,9 @@ from src.ui.main_view import MainView
 def main(page: ft.Page):
     page.title = "Supermarket Product Optimizer"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window.width = 800  # Updated to use the new property
-    page.window.height = 900  # Updated to use the new property
-    page.window.resizable = True  # Updated to use the new property
+    page.window.width = 800
+    page.window.height = 1000
+    page.window.resizable = True
     page.padding = 20
     page.window_icon = "icon.png"
     
