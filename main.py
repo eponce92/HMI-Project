@@ -8,7 +8,8 @@ def main(page: ft.Page):
     page.window.height = 900  # Updated to use the new property
     page.window.resizable = True  # Updated to use the new property
     page.padding = 20
-
+    page.window_icon = "icon.png"
+    
     def route_change(route):
         page.views.clear()
         page.views.append(
