@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+from .semantic_search import SemanticSearch, preprocess_query
 
 def clean_price(price):
     if isinstance(price, str):
@@ -35,7 +36,7 @@ def get_effective_price(row):
 def calculate_value_to_weight_ratio(row):
     return row['weight_lb'] / row['effective_price'] if row['effective_price'] > 0 else 0
 
-def preprocess_data(products, exclude_words, budget):
+def preprocess_data(products, exclude_words, budget, search_query):
     df = pd.DataFrame(products)
 
     # Apply exclusion filter if there are any exclude words
@@ -58,15 +59,27 @@ def preprocess_data(products, exclude_words, budget):
     # Filter out products that exceed the budget
     df = df[df['effective_price'] <= budget]
 
+    # Apply semantic search
+    semantic_search = SemanticSearch()
+    semantic_search.index_products(df.to_dict('records'))
+    search_results = semantic_search.search(preprocess_query(search_query))
+
+    # Convert search results back to DataFrame and merge with original data
+    search_df = pd.DataFrame(search_results)
+    df = df.merge(search_df[['name', 'similarity']], on='name', how='left')
+
+    # Sort by similarity and reset index
+    df = df.sort_values('similarity', ascending=False).reset_index(drop=True)
+
     df = df.dropna(subset=['effective_price', 'weight_lb', 'lb_per_dollar'])
     return df
 
 def get_top_3(df):
     return df.sort_values('lb_per_dollar', ascending=False).head(3).to_dict('records')
 
-def optimize_purchase_greedy(products, budget, exclude_words):
-    df = preprocess_data(products, exclude_words, budget)
-    df = df.sort_values('lb_per_dollar', ascending=False).reset_index(drop=True)
+def optimize_purchase_greedy(products, budget, exclude_words, search_query):
+    df = preprocess_data(products, exclude_words, budget, search_query)
+    df = df.sort_values(['similarity', 'lb_per_dollar'], ascending=[False, False]).reset_index(drop=True)
     
     selected_products = []
     total_weight = 0
@@ -86,8 +99,8 @@ def optimize_purchase_greedy(products, budget, exclude_words):
     top_3 = get_top_3(df)
     return selected_products, total_weight, top_3
 
-def optimize_purchase_knapsack(products, budget, exclude_words):
-    df = preprocess_data(products, exclude_words, budget)
+def optimize_purchase_knapsack(products, budget, exclude_words, search_query):
+    df = preprocess_data(products, exclude_words, budget, search_query)
     n = len(df)
     weights = df['effective_price'].tolist()
     values = df['weight_lb'].tolist()
@@ -118,10 +131,10 @@ def optimize_purchase_knapsack(products, budget, exclude_words):
     top_3 = get_top_3(df)
     return selected_products, total_weight, top_3
 
-def optimize_purchase_ratio(products, budget, exclude_words):
-    df = preprocess_data(products, exclude_words, budget)
+def optimize_purchase_ratio(products, budget, exclude_words, search_query):
+    df = preprocess_data(products, exclude_words, budget, search_query)
     df['value_to_weight_ratio'] = df.apply(calculate_value_to_weight_ratio, axis=1)
-    df = df.sort_values('value_to_weight_ratio', ascending=False).reset_index(drop=True)
+    df = df.sort_values(['similarity', 'value_to_weight_ratio'], ascending=[False, False]).reset_index(drop=True)
     
     selected_products = []
     total_weight = 0

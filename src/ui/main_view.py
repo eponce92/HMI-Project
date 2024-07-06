@@ -29,6 +29,13 @@ class MainView(ft.UserControl):
             hint_text="Enter your budget",
             height=self.input_height,
         )
+        self.search_query = ft.TextField(
+            label="Search Query",
+            expand=True,
+            prefix_icon=ft.icons.SEARCH,
+            hint_text="Enter your search query",
+            height=self.input_height,
+        )
         self.optimize_button = ft.ElevatedButton(
             "Optimize",
             on_click=self.handle_optimize,
@@ -61,20 +68,29 @@ class MainView(ft.UserControl):
                 ft.Card(
                     content=ft.Container(
                         content=ft.Column([
-                            ft.Text("Filter Products", size=20, weight=ft.FontWeight.BOLD),
+                            ft.Text("Filter and Search Products", size=20, weight=ft.FontWeight.BOLD),
                             ft.Container(
-                                content=ft.Row(
-                                    [
-                                        self.exclude_term,
-                                        ft.Container(width=10),  # Add spacing between fields
-                                        self.budget,
-                                        ft.Container(width=10),  # Add spacing before button
-                                        self.optimize_button,
-                                        ft.Container(width=10),  # Add spacing before progress ring
-                                        self.optimize_progress
-                                    ],
-                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                                ),
+                                content=ft.Column([
+                                    ft.Row(
+                                        [
+                                            self.exclude_term,
+                                            ft.Container(width=10),  # Add spacing between fields
+                                            self.budget,
+                                        ],
+                                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                                    ),
+                                    ft.Container(height=10),  # Add vertical spacing
+                                    ft.Row(
+                                        [
+                                            self.search_query,
+                                            ft.Container(width=10),  # Add spacing before button
+                                            self.optimize_button,
+                                            ft.Container(width=10),  # Add spacing before progress ring
+                                            self.optimize_progress
+                                        ],
+                                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                                    ),
+                                ]),
                                 padding=ft.padding.only(top=10, bottom=10)
                             ),
                         ]),
@@ -98,17 +114,18 @@ class MainView(ft.UserControl):
         self.update()
 
     async def handle_optimize(self, e):
-        if self.budget.value and hasattr(self, 'products'):  
+        if self.budget.value and self.search_query.value and hasattr(self, 'products'):
             try:
                 self.optimize_progress.visible = True
                 self.update()
 
                 budget = float(self.budget.value)
                 exclude_words = [word.strip().lower() for word in self.exclude_term.value.split(',')] if self.exclude_term.value else []
+                search_query = self.search_query.value
 
-                greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words)
-                knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words)
-                ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words)
+                greedy_results = optimize_purchase_greedy(self.products, budget, exclude_words, search_query)
+                knapsack_results = optimize_purchase_knapsack(self.products, budget, exclude_words, search_query)
+                ratio_results = optimize_purchase_ratio(self.products, budget, exclude_words, search_query)
 
                 print("Greedy Results:", greedy_results)  # Debugging line
                 print("Knapsack Results:", knapsack_results)  # Debugging line
